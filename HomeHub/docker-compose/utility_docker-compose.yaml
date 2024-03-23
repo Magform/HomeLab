@@ -1,0 +1,77 @@
+version: '3.8'
+services:
+    homepage:
+        image: ghcr.io/gethomepage/homepage
+        container_name: homepage
+        environment:
+            PUID: 1000
+            PGID: 1000
+        volumes:
+            - /docker/utility/config/homepage:/app/config
+            - /docker/utility/data/homepage:/app/public/icons
+            - /var/run/docker.sock:/var/run/docker.sock:ro 
+        ports:
+            - 80:3000
+        restart: unless-stopped
+    pihole:
+        image: pihole/pihole:latest
+        container_name: pihole
+        environment:
+            TZ: 'Europe/Rome'
+        volumes:
+            - /docker/utility/data/pi-hole:/etc/pihole
+            - /docker/utility/config/pi-hole:/etc/dnsmasq.d
+        ports:
+            - 53:53/tcp
+            - 53:53/udp
+            - 82:80/tcp
+
+        restart: unless-stopped
+    vaultwarden:
+        image : vaultwarden/server
+        container_name: vaultwarden
+        volumes:
+            - /docker/utility/data/vaultwarden:/data
+        ports:
+            - 1111:80
+        restart: unless-stopped
+    nginx:
+        image: jc21/nginx-proxy-manager:latest
+        container_name: nginx_proxy_manager
+        volumes:
+          - /docker/utility/data/nginx:/data
+          - /docker/utility/data/letsencrypt:/etc/letsencrypt
+        ports:
+            - 79:80
+            - 443:443
+            - 81:81
+        restart: unless-stopped
+    wireguard:
+        image: lscr.io/linuxserver/wireguard:latest
+        container_name: wireguard
+        cap_add:
+            - NET_ADMIN
+            - SYS_MODULE
+        environment:
+            - PUID=0
+            - PGID=0
+            - TZ=${TZ}
+            - SERVERPORT=${WIREGUARD_SERVERPORT}
+            - PEERS=${WIREGUARD_PEERS}
+            - PEERDNS=auto
+            - INTERNAL_SUBNET=${WIREGUARD_SUBNET}
+            - LOG_CONFS=true
+        volumes:
+            - /docker/utility/config/wireguard:/config
+        ports:
+            - 51820:51820/udp
+        sysctls:
+            - net.ipv4.conf.all.src_valid_mark=1
+        restart: unless-stopped
+    cloudflared-tunnel:
+        image: cloudflare/cloudflared
+        container_name: cloudflared-tunnel
+        command: tunnel run
+        environment:
+          - TUNNEL_TOKEN=${CLOUDFLARED_TOKEN}
+        restart: unless-stopped

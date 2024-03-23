@@ -1,0 +1,61 @@
+version: '3.8'
+services:
+    home-assistant:
+        image: ghcr.io/home-assistant/home-assistant
+        container_name: home_assistant
+        volumes:
+            - /docker/smart-home/data/config/home-assistant:/config
+            - /etc/localtime:/etc/localtime:ro
+            - /run/dbus:/run/dbus:ro
+        ports:
+            - 8123:8123 #Its the port used but this is not needed since it has network mode host
+        privileged: true
+        network_mode: host
+        restart: unless-stopped
+
+    firefly:
+        image: fireflyiii/core:latest
+        container_name: firefly-iii
+        env_file: ./.fireflyiii.env
+        environment:
+            - SITE_OWNER=${FIREFLYIII_SITE_OWNER}
+            - APP_KEY=${FIREFLYIII_ENCRYPTION_KEY}
+            - DB_DATABASE=${FIREFLYIII_DB_DATABASE}
+            - DB_USERNAME=${FIREFLYIII_DB_USERNAME}
+            - DB_PASSWORD=${FIREFLYIII_DB_PASSWORD}
+            - DB_HOST=${DEVICE_LOCAL_IP}
+            - TZ=${TZ}
+        volumes:
+            - /docker/smart-home/data/firefly:/var/www/html/storage/upload
+        ports:
+            - 8080:8080
+        depends_on:
+            - firefly_db
+        restart: unless-stopped
+
+    firefly_db:
+        image: mariadb
+        container_name: firefly_db
+        environment:
+            - MARIADB_DATABASE=${FIREFLYIII_DB_DATABASE}
+            - MARIADB_USER=${FIREFLYIII_DB_USERNAME}
+            - MARIADB_PASSWORD=${FIREFLYIII_DB_PASSWORD}
+            - MARIADB_RANDOM_ROOT_PASSWORD=true
+        volumes:
+            - /docker/smart-home/data/firefly_db:/var/lib/mysql
+        ports:
+            - 3306:3306
+        restart: unless-stopped
+
+    grocy:
+        image: lscr.io/linuxserver/grocy:latest
+        container_name: grocy
+        environment:
+        - PUID=1000
+        - PGID=1000
+        - TZ=Europe/Rome
+        volumes:
+        - /docker/smart-home/data/config/grocy:/config
+        ports:
+        - 9283:80
+        restart: unless-stopped 

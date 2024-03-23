@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+    speedtest:
+        image: ghcr.io/alexjustesen/speedtest-tracker
+        container_name: speedtest
+        ports:
+            - 1111:80
+            - 1443:443
+        environment:
+            - PUID=0
+            - PGID=0
+            - DB_CONNECTION=mysql
+            - DB_HOST=${DEVICE_LOCAL_IP}
+            - DB_PORT=3366
+            - DB_DATABASE=${SPEEDTEST_DB_DATABASE}
+            - DB_USERNAME=${SPEEDTEST_DB_USERNAME}
+            - DB_PASSWORD=${DB_PASSWORD}
+        volumes:
+            - /docker/monitoring/config/speedtest:/config
+            - /docker/monitoring/data/speedtest:/etc/ssl/web
+        restart: unless-stopped
+        depends_on:
+            - speedtest_db
+
+    speedtest_db:
+        image: mariadb
+        container_name: speedtest_db
+        environment:
+            - MARIADB_DATABASE=${SPEEDTEST_DB_DATABASE}
+            - MARIADB_USER=${SPEEDTEST_DB_USERNAME}
+            - MARIADB_PASSWORD=${SPEEDTEST_DB_PASSWORD}
+            - MARIADB_RANDOM_ROOT_PASSWORD=true
+        volumes:
+            - /docker/monitoring/data/speedtest_db:/var/lib/mysql
+        ports:
+            - 3366:3306
+        restart: unless-stopped
+
+    uptime-kuma:
+        image: louislam/uptime-kuma
+        container_name: uptime-kuma
+        volumes:
+            - /docker/monitoring/data/uptime-kuma:/app/data
+        ports:
+            - 3001:3001
+        restart: unless-stopped
+
+    grafana:
+        image: grafana/grafana-enterprise
+        container_name: grafana
+        user: "0"
+        volumes:
+            - /docker/monitoring/data/grafana:/var/lib/grafana
+        ports:
+            - 3000:3000
+        restart: unless-stopped
+
+    prometheus:
+        image: prom/prometheus
+        container_name: prometheus
+        user: "0"
+        volumes:
+            - /docker/monitoring/config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+            - /docker/monitoring/data/prometheus:/prometheus
+        ports:
+            - 9090:9090
+        restart: unless-stopped
+
+    prometheus_exporter:
+        image: prom/node-exporter
+        container_name: prometheus_exporter
+        ports:
+            - 9100:9100
+        restart: unless-stopped
