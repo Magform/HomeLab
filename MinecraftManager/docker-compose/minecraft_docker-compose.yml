@@ -1,0 +1,52 @@
+services:
+  minecraft:
+    image: itzg/minecraft-server
+    container_name: minecraft
+    environment:
+      EULA: "TRUE"
+      MOTD: ${MOTD}
+      DIFFICULTY: ${DIFFICULTY}
+      WHITELIST_FILE: "/whitelist.json"
+      TYPE: ${TYPE}
+      MAX_PLAYERS: ${MAX_PLAYERS}
+      MEMORY: ${MEMORY}
+      ONLINE_MODE: ${ONLINE_MODE}
+      VIEW_DISTANCE: ${VIEW_DISTANCE}
+      VERISON: ${VERSION}
+      RCON_PASSWORD: ${RCON_PASSWORD}
+    volumes:
+      - ${WHITELIST_LOCATION}:/data/whitelist.json
+      - /docker/minecraft/server:/data
+    ports:
+      - 25565:25565
+    restart: unless-stopped
+    depends_on:
+      restore-backup:
+        condition: service_completed_successfully
+  
+  restore-backup:
+    image: itzg/mc-backup
+    container_name: restore-backup
+    entrypoint: restore-tar-backup
+    volumes:
+      - /docker/minecraft/server:/data
+      - /docker/minecraft/backups:/backups:ro
+    restart: unless-stopped
+      
+  backups:
+    image: itzg/mc-backup
+    container_name: backup
+    depends_on:
+      minecraft:
+        condition: service_healthy
+    environment:
+      BACKUP_INTERVAL: "2h"
+      RCON_HOST: minecraft
+      INITIAL_DELAY: 0
+      PAUSE_IF_NO_PLAYERS: "TRUE"
+      RCON_PASSWORD: ${RCON_PASSWORD}
+      PRUNE_BACKUPS_DAYS: ${BACKUP_DELETION_DAYS}
+    volumes:
+      - /docker/minecraft/server:/data:ro
+      - /docker/minecraft/backups:/backups
+    restart: unless-stopped
