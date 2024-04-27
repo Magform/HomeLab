@@ -1,0 +1,109 @@
+services:
+
+    nextcloud:
+        image: linuxserver/nextcloud
+        container_name: nextcloud
+        environment:
+        - PUID=1000
+        - PGID=1000
+        - TZ=${TIMEZONE}
+        volumes:
+        - /docker/config/nextcloud:/config
+        - /docker/data/nextcloud:/data
+        ports:
+        - 443:443
+        restart: unless-stopped
+        depends_on:
+        - nextcloud_db
+
+    nextcloud_db:
+        image: linuxserver/mariadb
+        container_name: nextcloud_db
+        environment:
+        - PUID=1000
+        - PGID=1000
+        - MYSQL_ROOT_PASSWORD=${NEXTCLOUD_DB_ROOT_PASSWORD}
+        - TZ=${TIMEZONE}
+        - MYSQL_DATABASE=${NEXTCLOUD_DB_NAME}
+        - MYSQL_USER=${NEXTCLOUD_DB_USER}
+        - MYSQL_PASSWORD=${NEXTCLOUD_DB_PASSWORD}
+        volumes:
+        - /docker/data/nextcloud_db:/config
+        ports:
+        - 3306:3306
+        restart: unless-stopped
+
+    syncthing:
+        image: syncthing/syncthing
+        container_name: syncthing
+        environment:
+        - PUID=1001
+        - PGID=1001
+        volumes:
+        - /docker/data/synchthing:/var/syncthing
+        ports:
+        - 8384:8384 # Web UI
+        - 22000:22000/tcp # TCP file transfers
+        - 22000:22000/udp # QUIC file transfers
+        - 21027:21027/udp # Receive local discovery broadcasts
+        restart: unless-stopped
+
+    immich:
+      container_name: immich
+      image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+      command: ['start.sh', 'immich']
+      volumes:
+        - /docker/data/immich:/usr/src/app/upload
+        - /etc/localtime:/etc/localtime:ro
+      ports:
+        - 2283:3001
+      environment:
+        DB_HOSTNAME: immich_db
+        DB_DATABASE_NAME: ${IMMICH_DB_DATABASE_NAME}
+        DB_USERNAME: ${IMMICH_DB_USERNAME}
+        DB_PASSWORD: ${IMMICH_DB_PASSWORD}
+      depends_on:
+        - redis
+        - database
+      restart: unless-stopped
+
+    immich-microservices:
+      container_name: immich_microservices
+      image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+      file: hwaccel.transcoding.yml
+      service: cpu # set to one of [cpu, nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
+      command: ['start.sh', 'microservices']
+      volumes:
+        - /docker/data/immich:/usr/src/app/upload
+        - /etc/localtime:/etc/localtime:ro
+      depends_on:
+        - redis
+        - database
+      restart: unless-stopped
+
+    immich-machine-learning:
+      container_name: immich_machine_learning
+      # For hardware acceleration, add one of -[armnn, cuda, openvino] to the image tag.
+      # Example tag: ${IMMICH_VERSION:-release}-cuda
+      image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
+      file: hwaccel.ml.yml
+      service: cpu # set to one of [cpu, armnn, cuda, openvino, openvino-wsl] for accelerated inference - use the `-wsl` version for WSL2 where applicable
+      volumes:
+        - /docker/data/immich_cache:/cache
+      restart: unless-stopped
+
+    immich_redis:
+      container_name: immich_redis
+      image: registry.hub.docker.com/library/redis:6.2-alpine@sha256:84882e87b54734154586e5f8abd4dce69fe7311315e2fc6d67c29614c8de2672
+      restart: unless-stopped
+
+    immich_db:
+      container_name: immich_db
+      image: registry.hub.docker.com/tensorchord/pgvecto-rs:pg14-v0.2.0@sha256:90724186f0a3517cf6914295b5ab410db9ce23190a2d9d0b9dd6463e3fa298f0
+      environment:
+        POSTGRES_PASSWORD: ${IMMICH_DB_PASSWORD}
+        POSTGRES_USER: ${IMMICH_DB_USERNAME}
+        POSTGRES_DB: ${IMMICH_DB_DATABASE_NAME}
+      volumes:
+        - /docker/data/immich_db:/var/lib/postgresql/data
+      restart: unless-stopped
