@@ -1,0 +1,150 @@
+services:
+  
+  radarr:
+    image: lscr.io/linuxserver/radarr
+    container_name: radarr
+    environment:
+      - PUID=1001
+      - PGID=1001
+      - TZ=${TZ}
+    volumes:
+      - /docker/config/radarr:/config
+      - /docker/data/ready/movies:/movies
+      - /docker/data/downloads:/downloads
+    ports:
+      - 7878:7878
+    restart: unless-stopped
+  
+  sonarr:
+    image: lscr.io/linuxserver/sonarr
+    container_name: sonarr
+    environment:
+      - PUID=1001
+      - PGID=1001
+      - TZ=${TZ}
+    volumes:
+      - /docker/config/sonarr:/config
+      - /docker/data/ready/tv:/tv
+      - /docker/data/downloads:/downloads
+    ports:
+      - 8989:8989
+    restart: unless-stopped
+  
+  lidarr:
+    image: lscr.io/linuxserver/lidarr
+    container_name: lidarr
+    environment:
+      - PUID=1001
+      - PGID=1001
+      - TZ=${TZ}
+    volumes:
+      - /docker/config/lidarr:/config
+      - /docker/data/ready/music:/music
+      - /docker/data/downloads:/downloads
+    ports:
+      - 8686:8686
+    restart: unless-stopped
+
+  readarr:
+    image: lscr.io/linuxserver/readarr:develop
+    container_name: readarr
+    environment:
+      - PUID=1001
+      - PGID=1001
+      - TZ=${TZ}
+    volumes:
+      - /docker/config/readarr:/config
+      - /docker/data/ready/books:/books
+      - /docker/data/downloads:/downloads
+    ports:
+      - 8787:8787
+    restart: unless-stopped
+
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin
+    container_name: jellyfin
+    environment:
+      - PUID=1001
+      - PGID=1001
+      - TZ=${TZ}
+    volumes:
+      - /docker/config/jellyfin:/config
+      - /docker/data/ready/tv:/data/tvshows
+      - /docker/data/ready/movies:/data/movies
+      - /docker/data/ready/books:/data/books
+      - /docker/data/ready/music:/data/music
+      - /docker/data/ready/other:/data/other
+    ports:
+      - 8096:8096
+      - 8920:8920
+      - 7359:7359/udp
+      - 1900:1900/udp
+    restart: unless-stopped
+
+  kavita:
+    image: lscr.io/linuxserver/kavita
+    container_name: kavita
+    environment:
+      - PUID=1001
+      - PGID=1001
+      - TZ=${TZ}
+    volumes:
+      - /docker/config/kavita:/config
+      - /docker/data/ready/books:/data
+    ports:
+      - 5000:5000
+    restart: unless-stopped  
+
+  jellyseerr:
+    image: fallenbagel/jellyseerr
+    container_name: jellyseerr
+    environment:
+       - LOG_LEVEL=debug
+       - TZ=${TZ}
+    ports:
+       - 5055:5055
+    volumes:
+       - /docker/config/jellyseer:/app/config
+    restart: unless-stopped    
+    
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent
+    container_name: qbittorrent
+    environment:
+      - PUID=1001
+      - PGID=1001
+      - TZ=${TZ}
+      - WEBUI_PORT=8080
+    volumes:
+      - /docker/config/qbittorent:/config
+      - /docker/data/downloads:/downloads
+    ports:
+      - 8080:8080
+      - 6881:6881
+      - 6881:6881/udp
+    restart: unless-stopped
+   
+  jackett:
+    image: lscr.io/linuxserver/jackett
+    container_name: jackett
+    environment:
+      - PUID=1001
+      - PGID=1001
+      - TZ=${TZ}
+      - AUTO_UPDATE=true
+    volumes:
+      - /docker/config/jackett:/config
+      - /docker/data/downloads:/downloads
+    ports:
+      - 9117:9117
+    restart: unless-stopped
+    
+  flaresolverr:
+    image: flaresolverr/flaresolverr
+    container_name: flaresolverr
+    environment:
+      - TZ=${TZ}
+    ports:
+      - 8191:8191
+    restart: unless-stopped 
+    
