@@ -51,11 +51,23 @@ services:
         image: lscr.io/linuxserver/grocy:latest
         container_name: grocy
         environment:
-        - PUID=1000
-        - PGID=1000
-        - TZ=Europe/Rome
+            - PUID=1000
+            - PGID=1000
+            - TZ=Europe/Rome
         volumes:
-        - /docker/smart-home/data/config/grocy:/config
+            - /docker/smart-home/data/config/grocy:/config
         ports:
-        - 9283:80
-        restart: unless-stopped 
+            - 9283:80
+        restart: unless-stopped
+
+    mqtt:
+        image: eclipse-mosquitto
+        container_name: mosquitto
+        volumes:
+            - /docker/smart-home/config/mosquitto:/mosquitto/config:rw
+            - /docker/smart-home/data/mosquitto:/mosquitto/data:rw
+            - /docker/smart-home/data/mosquitto:/mosquitto/log:rw
+        ports:
+            - 1883:1883
+            - 9001:9001
+        restart: unless-stopped
